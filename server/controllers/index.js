@@ -2,6 +2,7 @@
 const models = require('../models');
 
 const Cat = models.Cat.CatModel;
+const Dog = models.Dog.DogModel;
 
 // default fake data so that we have something to work with until we make a real Cat
 const defaultData = {
@@ -38,6 +39,10 @@ const readCat = (req, res) => {
   Cat.findByName(name1, callback);
 };
 
+const readAllDogs = (req, res, callback) => {
+  Dog.find(callback);
+};
+
 const hostPage1 = (req, res) => {
   const callback = (err, docs) => {
     if (err) {
@@ -56,6 +61,18 @@ const hostPage2 = (req, res) => {
 
 const hostPage3 = (req, res) => {
   res.render('page3');
+};
+
+const hostPage4 = (req, res) => {
+  const callback = (err, docs) => {
+    if (err) {
+      return res.json({ err }); // if error, return it
+    }
+
+    return res.render('page4', { dogs: docs });
+  };
+
+  readAllDogs(req, res, callback);
 };
 
 const getName = (req, res) => {
@@ -89,6 +106,25 @@ const setName = (req, res) => {
   return res;
 };
 
+const setDogName = (req, res) => {
+  if (!req.body.name || !req.body.breed || !req.body.age) {
+    return res.status(400).json({ error: 'Name, breed and age are all required' });
+  }
+
+  const dogData = {
+    name: req.body.name,
+    breed: req.body.breed,
+    age: req.body.age,
+  };
+
+  const newDog = new Dog(dogData);
+  const savePromise = newDog.save();
+
+  savePromise.then(() => res.json({ name: newDog.name, age: newDog.age, breed: newDog.breed }));
+  savePromise.catch(err => res.json({ err }));
+
+  return res;
+};
 
 const searchName = (req, res) => {
   if (!req.query.name) {
@@ -105,6 +141,30 @@ const searchName = (req, res) => {
     }
 
     return res.json({ name: doc.name, beds: doc.bedsOwned });
+  });
+};
+
+const searchDogName = (req, res) => {
+  if (!req.query.name) {
+    return res.json({ error: 'Name is required to perform a search' });
+  }
+
+  return Dog.findByName(req.query.name, (err, doc) => {
+    if (err) {
+      return res.json({ err });
+    }
+
+    if (!doc) {
+      return res.json({ error: 'No dogs found' });
+    }
+
+    const foundDog = doc;
+
+    // dog was found so increase it's age before returning.
+    foundDog.age += 1;
+    foundDog.save();
+
+    return res.json({ name: doc.name, age: doc.age, breed: doc.breed });
   });
 };
 
@@ -135,4 +195,7 @@ module.exports = {
   updateLast,
   searchName,
   notFound,
+  setDogName,
+  page4: hostPage4,
+  searchDogName,
 };
